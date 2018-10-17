@@ -9,7 +9,8 @@
 #include <cpp-subprocess/subprocess.hpp>
 
 // local headers
-#include "elfutil/elf.h"
+#include "elfutil/ElfFile.h"
+#include "elfutil/errors.h"
 #include "log.h"
 #include "misc.hpp"
 

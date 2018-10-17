@@ -11,8 +11,14 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/modules/
 
 find_package(Boost COMPONENTS program_options filesystem regex REQUIRED)
 
-include(AddGoogleTest)
 add_subdirectory(src)
+
+option(BUILD_TEST "Build the tests" ON)
+if(BUILD_TEST)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
 
 include(FeatureSummary)
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)

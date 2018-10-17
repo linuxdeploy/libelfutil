@@ -10,18 +10,6 @@
 #pragma once
 
 namespace elfutil {
-    // thrown by constructor if file is not an ELF file
-    class ElfFileParseError : public std::runtime_error {
-    public:
-        explicit ElfFileParseError(const std::string& msg) : std::runtime_error(msg) {}
-    };
-
-    // thrown by traceDynamicDependencies() if a dependency is missing
-    class DependencyNotFoundError : public std::runtime_error {
-    public:
-        explicit DependencyNotFoundError(const std::string& msg) : std::runtime_error(msg) {}
-    };
-
     class ElfFile {
     private:
         class PrivateData;
@@ -33,7 +21,6 @@ namespace elfutil {
 
         ~ElfFile();
 
-    public:
         // return system ELF OS ABI
         static uint8_t getSystemElfABI();
 
@@ -43,7 +30,6 @@ namespace elfutil {
         // return system (ELF) endianness
         static uint8_t getSystemElfEndianness();
 
-    public:
         // recursively trace dynamic library dependencies of a given ELF file
         // this works for both libraries and executables
         // the resulting vector consists of absolute paths to the libraries determined by the same methods a system's
