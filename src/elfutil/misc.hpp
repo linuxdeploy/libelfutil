@@ -50,27 +50,6 @@ namespace elfutil {
             return split(s, '\n');
         }
 
-        static inline std::string strLower(std::string s) {
-            std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
-            return s;
-        }
-
-        static bool stringStartsWith(const std::string& string, const std::string& prefix) {
-            // sanity check
-            if (string.size() < prefix.size())
-                return false;
-
-            return strncmp(string.c_str(), prefix.c_str(), prefix.size()) == 0;
-        }
-
-        static bool stringEndsWith(const std::string& string, const std::string& suffix) {
-            // sanity check
-            if (string.size() < suffix.size())
-                return false;
-
-            return strcmp(string.c_str() + (string.size() - suffix.size()), suffix.c_str()) == 0;
-        }
-
         static bool stringContains(const std::string& string, const std::string& part) {
             return string.find(part) != std::string::npos;
         }
