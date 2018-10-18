@@ -9,7 +9,7 @@
 #include <cpp-subprocess/subprocess.hpp>
 
 // local headers
-#include "elfutil/ElfFile.h"
+#include "elfutil/elffile.h"
 #include "elfutil/errors.h"
 #include "log.h"
 #include "misc.hpp"
@@ -18,7 +18,7 @@ namespace bf = boost::filesystem;
 using namespace elfutil::log;
 
 namespace elfutil {
-    class ElfFile::PrivateData {
+    class elffile::PrivateData {
     public:
         const bf::path path;
         uint8_t elfClass = ELFCLASSNONE;
@@ -89,7 +89,7 @@ namespace elfutil {
         }
     };
 
-    ElfFile::ElfFile(const boost::filesystem::path& path) {
+    elffile::elffile(const boost::filesystem::path& path) {
         // check if file exists
         if (!bf::exists(path))
             throw ElfFileParseError("No such file or directory: " + path.string());
@@ -109,11 +109,11 @@ namespace elfutil {
         d->readDataUsingElfAPI();
     }
 
-    ElfFile::~ElfFile() {
+    elffile::~elffile() {
         delete d;
     }
 
-    std::vector<bf::path> ElfFile::traceDynamicDependencies() {
+    std::vector<bf::path> elffile::traceDynamicDependencies() {
         // this method's purpose is to abstract this process
         // the caller doesn't care _how_ it's done, after all
 
@@ -167,7 +167,7 @@ namespace elfutil {
         return paths;
     }
 
-    std::string ElfFile::getRPath() {
+    std::string elffile::getRPath() {
         try {
             subprocess::Popen patchelfProc(
                 {PrivateData::getPatchelfPath().c_str(), "--print-rpath", d->path.c_str()},
@@ -202,7 +202,7 @@ namespace elfutil {
         }
     }
 
-    bool ElfFile::setRPath(const std::string& value) {
+    bool elffile::setRPath(const std::string& value) {
         try {
             subprocess::Popen patchelfProc(
                 {PrivateData::getPatchelfPath().c_str(), "--set-rpath", value.c_str(), d->path.c_str()},
@@ -225,7 +225,7 @@ namespace elfutil {
         return true;
     }
 
-    uint8_t ElfFile::getSystemElfABI() {
+    uint8_t elffile::getSystemElfABI() {
         // the only way to get the system's ELF ABI is to read the own executable using the ELF header,
         // and get the ELFOSABI flag
         auto self = std::shared_ptr<char>(realpath("/proc/self/exe", nullptr), [](char* p) { free(p); });
@@ -249,7 +249,7 @@ namespace elfutil {
         return static_cast<uint8_t>(buf);
     }
 
-    uint8_t ElfFile::getSystemElfClass() {
+    uint8_t elffile::getSystemElfClass() {
 #if __SIZEOF_POINTER__ == 4
         return ELFCLASS32;
 #elif __SIZEOF_POINTER__ == 8
@@ -259,7 +259,7 @@ namespace elfutil {
 #endif
     }
 
-    uint8_t ElfFile::getSystemElfEndianness() {
+    uint8_t elffile::getSystemElfEndianness() {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
         return ELFDATA2LSB;
 #elif __BYTE_ORDER == __BIG_ENDIAN
@@ -269,12 +269,11 @@ namespace elfutil {
 #endif
     }
 
-    uint8_t ElfFile::getElfClass() {
+    uint8_t elffile::getElfClass() {
         return d->elfClass;
     }
 
-    uint8_t ElfFile::getElfABI() {
+    uint8_t elffile::getElfABI() {
         return d->elfABI;
     }
 }
-

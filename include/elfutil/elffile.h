@@ -10,16 +10,16 @@
 #pragma once
 
 namespace elfutil {
-    class ElfFile {
+    class elffile {
     private:
         class PrivateData;
 
         PrivateData* d;
 
     public:
-        explicit ElfFile(const boost::filesystem::path& path);
+        explicit elffile(const boost::filesystem::path& path);
 
-        ~ElfFile();
+        ~elffile();
 
         // return system ELF OS ABI
         static uint8_t getSystemElfABI();
@@ -52,5 +52,3 @@ namespace elfutil {
         uint8_t getElfABI();
     };
 }
-
-

@@ -1,10 +1,10 @@
 #include "gtest/gtest.h"
 
-#include <elfutil/ElfFile.h>
+#include <elfutil/elffile.h>
 
 TEST(ELFFileTests, testBasicFunctions) {
     boost::filesystem::path libPath(SIMPLE_LIBRARY_PATH);
-    elfutil::ElfFile f(libPath);
+    elfutil::elffile f(libPath);
 
     printf("\n");
     printf("SystemElfABI: %d\n", f.getSystemElfABI());
@@ -18,7 +18,7 @@ TEST(ELFFileTests, testBasicFunctions) {
 
 TEST(ELFFileTests, setGetRpath) {
     boost::filesystem::path libPath(SIMPLE_LIBRARY_PATH);
-    elfutil::ElfFile f(libPath);
+    elfutil::elffile f(libPath);
 
     const auto oldRpath = f.getRPath();
     const std::string rpath = "../lib";
