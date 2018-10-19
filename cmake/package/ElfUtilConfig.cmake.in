@@ -1,0 +1,16 @@
+# - Config file for the ElfUtil package
+# It defines the following variables
+#  ELFUTIL_INCLUDE_DIRS - include directories for ElfUtil
+#  ELFUTIL_LIBRARIES    - libraries to link against
+
+# Compute paths
+get_filename_component(ELFUTIL_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+set(ELFUTIL_INCLUDE_DIRS "@CONF_INCLUDE_DIRS@")
+
+# Our library dependencies (contains definitions for IMPORTED targets)
+if(NOT TARGET ElfUtil AND NOT ElfUtil_BINARY_DIR)
+  include("${ELFUTIL_CMAKE_DIR}/ElfUtilTargets.cmake")
+endif()
+
+# These are IMPORTED targets created by ElfUtilTargets.cmake
+set(ELFUTIL_LIBRARIES elfutil)

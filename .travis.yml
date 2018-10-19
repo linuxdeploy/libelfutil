@@ -1,0 +1,22 @@
+language: c++
+os: linux
+dist: xenial
+
+addons:
+  apt:
+    packages:
+    - cmake
+    - libboost-filesystem-dev
+    - libboost-regex-dev
+    - patchelf
+
+notifications:
+  email: false
+
+git:
+  depth: 3
+
+script:
+  - cmake .
+  - make -j$(nproc)
+  - ctest -V

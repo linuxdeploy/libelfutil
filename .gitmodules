@@ -1,0 +1,6 @@
+[submodule "src/cpp-subprocess"]
+	path = src/cpp-subprocess
+	url = https://github.com/arun11299/cpp-subprocess.git
+[submodule "tests/googletest"]
+	path = tests/googletest
+	url = https://github.com/google/googletest.git
