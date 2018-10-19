@@ -1,5 +1,6 @@
 language: c++
 os: linux
+dist: xenial
 
 addons:
   apt:
@@ -7,6 +8,7 @@ addons:
     - cmake
     - libboost-filesystem-dev
     - libboost-regex-dev
+    - patchelf
 
 notifications:
   email: false
