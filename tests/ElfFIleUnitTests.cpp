@@ -27,3 +27,22 @@ TEST(ELFFileTests, setGetRpath) {
 
     f.setRPath(oldRpath);
 }
+
+TEST(ELFFileTests, traceDynamicDependencies) {
+    boost::filesystem::path libPath(SIMPLE_LIBRARY_PATH);
+    elfutil::elffile f(libPath);
+
+    std::set<std::string> expectedDependencies = {"libstdc++.so", "libc.so", "libm.so", "libgcc_s.so"};
+    auto list = f.traceDynamicDependencies();
+
+    std::cout << "simple_library was linked to:" << std::endl;
+    for (const auto& p : list) {
+        auto it = expectedDependencies.find(p.stem().string());
+        if (it != expectedDependencies.end() )
+            expectedDependencies.erase(it);
+
+        std::cout << p.stem() << std::endl;
+    }
+
+    ASSERT_TRUE(expectedDependencies.empty());
+}
