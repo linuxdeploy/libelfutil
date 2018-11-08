@@ -53,20 +53,26 @@ TEST_F(ELFUtilTestsFixture, replaceRunPath) {
     ASSERT_EQ(expected, runPath);
 }
 
-TEST_F(ELFUtilTestsFixture, traceDynamicDependencies) {
-//    elfutil::elffile f(library_path.string());
-//
-//    std::set<std::string> expectedDependencies = {"libstdc++.so", "libc.so", "libm.so", "libgcc_s.so"};
-//    auto list = f.traceDynamicDependencies();
-//
-//    std::cout << "simple_library was linked to:" << std::endl;
-//    for (const auto& p : list) {
-//        auto it = expectedDependencies.find(p.stem().string());
-//        if (it != expectedDependencies.end())
-//            expectedDependencies.erase(it);
-//
-//        std::cout << p.stem() << std::endl;
-//    }
-//
-//    ASSERT_TRUE(expectedDependencies.empty());
+TEST_F(ELFUtilTestsFixture, getLinkedLibrariesSonames) {
+    std::set<std::string> expectedDependencies = {"libstdc++.so", "libc.so"};
+    auto list = elfutil::getLinkedLibrariesSonames(library_path.string());
+
+    std::cout << std::endl << "simple_library was linked to:" << std::endl;
+    for (const auto& p : list) {
+        boost::filesystem::path path = p;
+        auto it = expectedDependencies.find(path.stem().string());
+        if (it != expectedDependencies.end())
+            expectedDependencies.erase(it);
+
+        std::cout << p << std::endl;
+    }
+
+    ASSERT_TRUE(expectedDependencies.empty());
+}
+
+TEST_F(ELFUtilTestsFixture, getLibraryPath) {
+    auto libcPath = elfutil::getLibraryPath("libc.so.6");
+    std::cout << std::endl << "libc.so.6: " << libcPath << std::endl;
+
+    ASSERT_FALSE(libcPath.empty());
 }

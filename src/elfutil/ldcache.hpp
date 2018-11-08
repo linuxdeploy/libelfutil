@@ -19,20 +19,22 @@
 
 #include <string>
 #include <vector>
-
-#include <stout/try.hpp>
+#include <stdexcept>
 
 namespace ldcache {
 
-struct Entry
-{
-  std::string name;
-  std::string path;
-};
+    struct Entry {
+        std::string name;
+        std::string path;
+    };
 
-// Parse an ld.so.cache file into a vector of ELF library entries.
-Try<std::vector<Entry>> parse(const std::string& path = "/etc/ld.so.cache");
+    // Parse an ld.so.cache file into a vector of ELF library entries.
+    std::vector<Entry> parse(const std::string& path = "/etc/ld.so.cache");
 
+    class Error : public std::runtime_error {
+    public:
+        Error(const std::string& what);
+    };
 } // namespace ldcache {
 
 #endif // __LDCACHE_HPP__

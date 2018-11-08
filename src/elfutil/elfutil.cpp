@@ -1,7 +1,10 @@
 #include <LIEF/LIEF.hpp>
+#include <elfutil/elfutil.h>
+
 
 #include "elfutil/elfutil.h"
 #include "elfutil/errors.h"
+#include "DependenciesMapper.h"
 
 std::string getDynamicEntryStringFromTag(std::unique_ptr<LIEF::ELF::Binary>& elf, const LIEF::ELF::DYNAMIC_TAGS& tag) {
     std::string value;
@@ -49,4 +52,30 @@ void elfutil::setRunPath(const std::string& file_path, const std::string& runPat
         std::cerr << exception.what();
         throw ElfFileParseError(exception.what());
     }
+}
+
+std::vector<std::string> elfutil::getLinkedLibrariesSonames(const std::string& file_path) {
+    std::vector<std::string> sonames;
+    try {
+        auto elf = LIEF::ELF::Parser::parse(file_path);
+        auto dynamicSection = elf->get_section(".dynamic");
+        auto dynstrSection = elf->get_section(".dynstr");
+
+        for (const auto entry: elf->dynamic_entries()) {
+            if (entry.tag() == LIEF::ELF::DYNAMIC_TAGS::DT_NEEDED) {
+                const auto soname = ((char*) dynstrSection.content().data()) + entry.value();
+                sonames.push_back(soname);
+            }
+        }
+    } catch (const LIEF::exception& exception) {
+        std::cerr << exception.what();
+
+        throw ElfFileParseError(exception.what());
+    }
+    return sonames;
+}
+
+std::string elfutil::getLibraryPath(const std::string& soname) {
+    DependenciesMapper mapper;
+    return mapper.getLibaryPath(soname);
 }

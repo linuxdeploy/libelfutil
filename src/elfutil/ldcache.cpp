@@ -23,11 +23,11 @@
 
 #include <string>
 #include <vector>
+#include <cstring>
+#include <fstream>
+#include <sstream>
 
-#include <stout/os.hpp>
-#include <stout/try.hpp>
-
-#include "linux/ldcache.hpp"
+#include "ldcache.hpp"
 
 using std::string;
 using std::vector;
@@ -84,161 +84,155 @@ using std::vector;
 
 namespace ldcache {
 
-constexpr char HEADER_MAGIC_OLD[] = "ld.so-1.7.0";
-constexpr char HEADER_MAGIC_NEW[] = "glibc-ld.so.cache1.1";
+    constexpr char HEADER_MAGIC_OLD[] = "ld.so-1.7.0";
+    constexpr char HEADER_MAGIC_NEW[] = "glibc-ld.so.cache1.1";
 
 #define IS_ELF  0x00000001
 
 
-struct HeaderOld
-{
-  char magic[sizeof(HEADER_MAGIC_OLD) - 1];
-  uint32_t libraryCount; // Number of library entries.
-};
+    struct HeaderOld {
+        char magic[sizeof(HEADER_MAGIC_OLD) - 1];
+        uint32_t libraryCount; // Number of library entries.
+    };
 
 
-struct EntryOld
-{
-  int32_t flags;  // 0x01 indicates ELF library.
-  uint32_t key;   // String table index.
-  uint32_t value; // String table index.
-};
+    struct EntryOld {
+        int32_t flags;  // 0x01 indicates ELF library.
+        uint32_t key;   // String table index.
+        uint32_t value; // String table index.
+    };
 
 
-struct HeaderNew
-{
-  char magic[sizeof(HEADER_MAGIC_NEW) - 1];
-  uint32_t libraryCount;  // Number of library entries.
-  uint32_t stringsLength; // Length of "actual" string table.
-  uint32_t unused[5];     // Leave space for future extensions
-                          // and align to 8 byte boundary.
-};
+    struct HeaderNew {
+        char magic[sizeof(HEADER_MAGIC_NEW) - 1];
+        uint32_t libraryCount;  // Number of library entries.
+        uint32_t stringsLength; // Length of "actual" string table.
+        uint32_t unused[5];     // Leave space for future extensions
+        // and align to 8 byte boundary.
+    };
 
 
-struct EntryNew
-{
-  int32_t flags;        // Flags bits determine arch and library type.
-  uint32_t key;         // String table index.
-  uint32_t value;       // String table index.
-  uint32_t osVersion;   // Required OS version.
-  uint64_t hwcap;       // Hwcap entry.
-};
+    struct EntryNew {
+        int32_t flags;        // Flags bits determine arch and library type.
+        uint32_t key;         // String table index.
+        uint32_t value;       // String table index.
+        uint32_t osVersion;   // Required OS version.
+        uint64_t hwcap;       // Hwcap entry.
+    };
 
 
 // Returns a 'boundary' aligned pointer by rounding up to
 // the nearest multiple of 'boundary'.
-static inline const char* align(const char* address, size_t boundary)
-{
-  if ((size_t)address % boundary == 0) {
-    return address;
-  }
-  return (address + boundary) - ((size_t)address % boundary);
-}
-
-
-Try<vector<Entry>> parse(const string& path)
-{
-  // Read the complete file into a buffer
-  Try<string> buffer = os::read(path);
-  if (buffer.isError()) {
-    return Error(buffer.error());
-  }
-
-  const char* data = buffer->data();
-
-  // Grab a pointer to the old format header (for verification of
-  // HEADER_MAGIC_OLD later on). Then jump forward to the location of
-  // the new format header (it is the only format we support).
-  HeaderOld* headerOld = (HeaderOld*)data;
-  data += sizeof(HeaderOld);
-  if (data >= buffer->data() + buffer->size()) {
-    return Error("Invalid format");
-  }
-
-  data += headerOld->libraryCount * sizeof(EntryOld);
-  if (data >= buffer->data() + buffer->size()) {
-    return Error("Invalid format");
-  }
-
-  // The new format header and all of its library entries are embedded
-  // in the old format's string table (the current location of data).
-  // However, the header is aligned on an 8 byte boundary, so we
-  // need to align 'data' to get it to point to the new header.
-  data = align(data, alignof(HeaderNew));
-  if (data >= buffer->data() + buffer->size()) {
-    return Error("Invalid format");
-  }
-
-  // Construct pointers to all of the important regions in the new
-  // format: the header, the libentry array, and the new string table
-  // (which starts at the same address as the aligned headerNew pointer).
-  HeaderNew* headerNew = (HeaderNew*)data;
-  data += sizeof(HeaderNew);
-  if (data >= buffer->data() + buffer->size()) {
-    return Error("Invalid format");
-  }
-
-  EntryNew* entriesNew = (EntryNew*)data;
-  data += headerNew->libraryCount * sizeof(EntryNew);
-  if (data >= buffer->data() + buffer->size()) {
-    return Error("Invalid format");
-  }
-
-  // The start of the strings table is at the beginning of
-  // the new header, per the above format description.
-  char* strings = (char*)headerNew;
-
-  // Adjust the pointer to add on the additional size of the strings
-  // contained in the string table. At this point, 'data' should
-  // point to an address just beyond the end of the file.
-  data += headerNew->stringsLength;
-  if ((size_t)(data - buffer->data()) != buffer->size()) {
-    return Error("Invalid format");
-  }
-
-  // Validate our header magic.
-  if (strncmp(headerOld->magic,
-        HEADER_MAGIC_OLD,
-        sizeof(HEADER_MAGIC_OLD) - 1) != 0) {
-    return Error("Invalid format");
-  }
-
-  if (strncmp(headerNew->magic,
-        HEADER_MAGIC_NEW,
-        sizeof(HEADER_MAGIC_NEW) - 1) != 0) {
-    return Error("Invalid format");
-  }
-
-  // Make sure the very last character in the buffer is a '\0'.
-  // This way, no matter what strings we index in the string
-  // table, we know they will never run beyond the end of the
-  // file buffer when extracting them.
-  if (*(data - 1) != '\0') {
-    return Error("Invalid format");
-  }
-
-  // Build our vector of ldcache entries.
-  vector<Entry> ldcache;
-  for (uint32_t i = 0; i < headerNew->libraryCount; i++) {
-    if (!(entriesNew[i].flags & IS_ELF)) {
-      continue;
+    static inline const char* align(const char* address, size_t boundary) {
+        if ((size_t) address % boundary == 0) {
+            return address;
+        }
+        return (address + boundary) - ((size_t) address % boundary);
     }
 
-    if (strings + entriesNew[i].key >= data) {
-      return Error("Invalid format");
+
+    vector<Entry> parse(const string& path) {
+        // Read the complete file into a buffer
+        std::ifstream stream(path);
+        std::ifstream in(path);
+        std::vector<char> buffer((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+
+        const char* data = buffer.data();
+
+        // Grab a pointer to the old format header (for verification of
+        // HEADER_MAGIC_OLD later on). Then jump forward to the location of
+        // the new format header (it is the only format we support).
+        HeaderOld* headerOld = (HeaderOld*) data;
+        data += sizeof(HeaderOld);
+        if (data >= buffer.data() + buffer.size()) {
+            throw Error("Invalid format");
+        }
+
+        data += headerOld->libraryCount * sizeof(EntryOld);
+        if (data >= buffer.data() + buffer.size()) {
+            throw Error("Invalid format");
+        }
+
+        // The new format header and all of its library entries are embedded
+        // in the old format's string table (the current location of data).
+        // However, the header is aligned on an 8 byte boundary, so we
+        // need to align 'data' to get it to point to the new header.
+        data = align(data, alignof(HeaderNew));
+        if (data >= buffer.data() + buffer.size()) {
+            throw Error("Invalid format");
+        }
+
+        // Construct pointers to all of the important regions in the new
+        // format: the header, the libentry array, and the new string table
+        // (which starts at the same address as the aligned headerNew pointer).
+        HeaderNew* headerNew = (HeaderNew*) data;
+        data += sizeof(HeaderNew);
+        if (data >= buffer.data() + buffer.size()) {
+            throw Error("Invalid format");
+        }
+
+        EntryNew* entriesNew = (EntryNew*) data;
+        data += headerNew->libraryCount * sizeof(EntryNew);
+        if (data >= buffer.data() + buffer.size()) {
+            throw Error("Invalid format");
+        }
+
+        // The start of the strings table is at the beginning of
+        // the new header, per the above format description.
+        char* strings = (char*) headerNew;
+
+        // Adjust the pointer to add on the additional size of the strings
+        // contained in the string table. At this point, 'data' should
+        // point to an address just beyond the end of the file.
+        data += headerNew->stringsLength;
+        if ((size_t) (data - buffer.data()) != buffer.size()) {
+            throw Error("Invalid format");
+        }
+
+        // Validate our header magic.
+        if (strncmp(headerOld->magic,
+                    HEADER_MAGIC_OLD,
+                    sizeof(HEADER_MAGIC_OLD) - 1) != 0) {
+            throw Error("Invalid format");
+        }
+
+        if (strncmp(headerNew->magic,
+                    HEADER_MAGIC_NEW,
+                    sizeof(HEADER_MAGIC_NEW) - 1) != 0) {
+            throw Error("Invalid format");
+        }
+
+        // Make sure the very last character in the buffer is a '\0'.
+        // This way, no matter what strings we index in the string
+        // table, we know they will never run beyond the end of the
+        // file buffer when extracting them.
+        if (*(data - 1) != '\0') {
+            throw Error("Invalid format");
+        }
+
+        // Build our vector of ldcache entries.
+        vector<Entry> ldcache;
+        for (uint32_t i = 0; i < headerNew->libraryCount; i++) {
+            if (!(entriesNew[i].flags & IS_ELF)) {
+                continue;
+            }
+
+            if (strings + entriesNew[i].key >= data) {
+                throw Error("Invalid format");
+            }
+
+            if (strings + entriesNew[i].value >= data) {
+                throw Error("Invalid format");
+            }
+
+            Entry entry;
+            entry.name = &strings[entriesNew[i].key];
+            entry.path = &strings[entriesNew[i].value];
+            ldcache.push_back(entry);
+        }
+
+        return ldcache;
     }
 
-    if (strings + entriesNew[i].value >= data) {
-      return Error("Invalid format");
-    }
-
-    Entry entry;
-    entry.name = &strings[entriesNew[i].key];
-    entry.path = &strings[entriesNew[i].value];
-    ldcache.push_back(entry);
-  }
-
-  return ldcache;
-}
-
+    Error::Error(const string& what) : runtime_error(what) {}
 } // namespace ldcache {
