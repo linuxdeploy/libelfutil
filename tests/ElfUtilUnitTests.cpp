@@ -76,3 +76,25 @@ TEST_F(ELFUtilTestsFixture, getLibraryPath) {
 
     ASSERT_FALSE(libcPath.empty());
 }
+
+TEST_F(ELFUtilTestsFixture, isElfFile) {
+    ASSERT_TRUE(elfutil::isElfFile(library_path.string()));
+    ASSERT_TRUE(elfutil::isElfFile(library_rpathed_path.string()));
+}
+
+TEST_F(ELFUtilTestsFixture, getLinkedLibraryPathsRecursive) {
+    std::set<std::string> expectedDependencies = {"libstdc++.so", "libc.so"};
+    auto list = elfutil::getLinkedLibrariesPathsRecursive(library_path.string());
+
+    std::cout << std::endl << "simple_library was linked to:" << std::endl;
+    for (const auto& p : list) {
+        boost::filesystem::path path = p;
+        auto it = expectedDependencies.find(path.stem().string());
+        if (it != expectedDependencies.end())
+            expectedDependencies.erase(it);
+
+        std::cout << p << std::endl;
+    }
+
+    ASSERT_TRUE(expectedDependencies.empty());
+}

@@ -79,3 +79,20 @@ std::string elfutil::getLibraryPath(const std::string& soname) {
     DependenciesMapper mapper;
     return mapper.getLibaryPath(soname);
 }
+
+std::vector<std::string> elfutil::getLinkedLibrariesPathsRecursive(const std::string& filePath) {
+    DependenciesMapper mapper;
+    return mapper.listDependenciesRecursive(filePath);
+}
+
+bool elfutil::isElfFile(const std::string& filePath) {
+    std::ifstream in(filePath, std::ios::binary);
+
+    static std::vector<char> magicNumber = {0x7f, 'E', 'L', 'F'};
+    auto itr = std::istreambuf_iterator<char>(in);
+    for (int i = 0; i < 4; i++, itr++)
+        if (*itr != magicNumber[i])
+            return false;
+
+    return true;
+}

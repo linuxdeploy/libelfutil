@@ -7,6 +7,14 @@
 
 namespace elfutil {
     /**
+     * Check if <filePath> has the ELF magic bytes
+     *
+     * @param filePath
+     * @return true if the bytes are present, false otherwise
+     */
+    bool isElfFile(const std::string &filePath);
+
+    /**
      * Read the elf file RUNPATH. Fallbacks to RPATH if the RUNPATH entry is not found.
      * @param file_path
      * @return RUNPATH string
@@ -44,8 +52,8 @@ namespace elfutil {
 
     /**
      * Resolve the whole dependency tree of <file_path>
-     * @param file_path
+     * @param filePath
      * @return libraries paths
      */
-    std::string getLinkedLibraryPathsRecursive(const std::string& file_path);
+    std::vector<std::string> getLinkedLibrariesPathsRecursive(const std::string& filePath);
 }
