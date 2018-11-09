@@ -82,6 +82,12 @@ TEST_F(ELFUtilTestsFixture, isElfFile) {
     ASSERT_TRUE(elfutil::isElfFile(library_rpathed_path.string()));
 }
 
+TEST_F(ELFUtilTestsFixture, getSoname) {
+    const auto soname = elfutil::getSoname(library_path.string());
+    ASSERT_STREQ(soname.c_str(), "libsimple_library.so");
+}
+
+
 TEST_F(ELFUtilTestsFixture, getLinkedLibraryPathsRecursive) {
     std::set<std::string> expectedDependencies = {"libstdc++.so", "libc.so"};
     auto list = elfutil::getLinkedLibrariesPathsRecursive(library_path.string());

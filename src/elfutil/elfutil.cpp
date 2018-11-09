@@ -96,3 +96,16 @@ bool elfutil::isElfFile(const std::string& filePath) {
 
     return true;
 }
+
+std::string elfutil::getSoname(const std::string& filePath) {
+    try {
+        auto elf = LIEF::ELF::Parser::parse(filePath);
+        std::string soname = getDynamicEntryStringFromTag(elf, LIEF::ELF::DYNAMIC_TAGS::DT_SONAME);
+
+        return soname;
+    } catch (const LIEF::exception& exception) {
+        std::cerr << exception.what();
+
+        return std::string();
+    }
+}

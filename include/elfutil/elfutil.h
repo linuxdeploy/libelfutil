@@ -33,6 +33,13 @@ namespace elfutil {
 
 
     /**
+     * Read library soname
+     * @param filePath
+     * @return soname if all goes ok, otherwise an empty string
+     */
+    std::string getSoname(const std::string& filePath);
+
+    /**
      * Read the linked libraries sonames.
      *
      * @param file_path
