@@ -1,0 +1,2 @@
+add_library(simple_library2 SHARED simple_library2.cpp)
+target_link_libraries(simple_library2 simple_library)

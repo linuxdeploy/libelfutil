@@ -1,9 +1,9 @@
 add_library(elfutil SHARED
     elfutil/errors.cpp
     elfutil/elfutil.cpp
-    elfutil/DependenciesMapper.cpp
+    elfutil/LibrariesCache.cpp
     elfutil/ldcache.cpp
-    elfutil/elfutil_private.h)
+    elfutil/elfutil_private.h elfutil/ElfFileDependenciesResolver.cpp elfutil/ElfFileDependenciesResolver.h)
 
 target_include_directories(elfutil
     PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>

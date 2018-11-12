@@ -1,14 +1,18 @@
+#include <queue>
 #include <LIEF/LIEF.hpp>
 #include <elfutil/elfutil.h>
 
 
 #include "elfutil/elfutil.h"
 #include "elfutil/errors.h"
-#include "DependenciesMapper.h"
+#include "LibrariesCache.h"
+#include "ElfFileDependenciesResolver.h"
+
+using namespace std;
 
 std::string getDynamicEntryStringFromTag(std::unique_ptr<LIEF::ELF::Binary>& elf, const LIEF::ELF::DYNAMIC_TAGS& tag) {
     std::string value;
-    if (elf->has(tag)) {
+    if (elf && elf->has(tag)) {
         try {
             auto dynamicSection = elf->get_section(".dynamic");
             auto dynstrSection = elf->get_section(".dynstr");
@@ -23,9 +27,9 @@ std::string getDynamicEntryStringFromTag(std::unique_ptr<LIEF::ELF::Binary>& elf
     return value;
 }
 
-std::string elfutil::getRunPath(const std::string& file_path) {
+std::string elfutil::getRunPath(const std::string& filePath) {
     try {
-        auto elf = LIEF::ELF::Parser::parse(file_path);
+        auto elf = LIEF::ELF::Parser::parse(filePath);
 
         std::string runpath = getDynamicEntryStringFromTag(elf, LIEF::ELF::DYNAMIC_TAGS::DT_RUNPATH);
         std::string rpath = getDynamicEntryStringFromTag(elf, LIEF::ELF::DYNAMIC_TAGS::DT_RPATH);
@@ -41,58 +45,73 @@ std::string elfutil::getRunPath(const std::string& file_path) {
     }
 }
 
-void elfutil::setRunPath(const std::string& file_path, const std::string& runPath) {
+void elfutil::setRunPath(const std::string& filePath, const std::string& runPath) {
     try {
-        auto elf = LIEF::ELF::Parser::parse(file_path);
+        auto elf = LIEF::ELF::Parser::parse(filePath);
         LIEF::ELF::DynamicEntryRunPath runPathDyn(runPath);
+        elf->remove(LIEF::ELF::DYNAMIC_TAGS::DT_RUNPATH);
+        elf->remove(LIEF::ELF::DYNAMIC_TAGS::DT_RPATH);
+
         elf->add(runPathDyn);
 
-        elf->write(file_path);
+        elf->write(filePath);
     } catch (const LIEF::exception& exception) {
         std::cerr << exception.what();
         throw ElfFileParseError(exception.what());
     }
 }
 
-std::vector<std::string> elfutil::getLinkedLibrariesSonames(const std::string& file_path) {
-    std::vector<std::string> sonames;
+std::vector<std::string> elfutil::resolveDependenciesRecursively(const std::string& filePath) {
+    LibrariesCache cache;
+
+    set<string> visited;
     try {
-        auto elf = LIEF::ELF::Parser::parse(file_path);
-        auto dynamicSection = elf->get_section(".dynamic");
-        auto dynstrSection = elf->get_section(".dynstr");
+        ElfFileDependenciesResolver rootFile(filePath, &cache);
+        set<string> toVisit = {filePath};
 
-        for (const auto entry: elf->dynamic_entries()) {
-            if (entry.tag() == LIEF::ELF::DYNAMIC_TAGS::DT_NEEDED) {
-                const auto soname = ((char*) dynstrSection.content().data()) + entry.value();
-                sonames.push_back(soname);
+        while (!toVisit.empty()) {
+            const auto current = *toVisit.begin();
+
+            ElfFileDependenciesResolver currentFile(current, &cache);
+
+            auto directDependencies = currentFile.resolveDependencies();
+            for (const auto& d: directDependencies) {
+                if (visited.find(d) == visited.end() &&
+                    toVisit.find(d) == toVisit.end())
+
+                    toVisit.insert(d);
             }
+
+            for (const auto& missing: currentFile.getMissingDependencies())
+                cerr << "WARNING: " << current << " dependency not found: " << missing << endl;
+
+
+            visited.insert(current);
+            toVisit.erase(current);
         }
-    } catch (const LIEF::exception& exception) {
-        std::cerr << exception.what();
 
-        throw ElfFileParseError(exception.what());
+        visited.erase(filePath);
+
+    } catch (const runtime_error& error) {
     }
-    return sonames;
-}
 
-std::string elfutil::getLibraryPath(const std::string& soname) {
-    DependenciesMapper mapper;
-    return mapper.getLibaryPath(soname);
-}
 
-std::vector<std::string> elfutil::getLinkedLibrariesPathsRecursive(const std::string& filePath) {
-    DependenciesMapper mapper;
-    return mapper.listDependenciesRecursive(filePath);
+    return vector<string>(visited.begin(), visited.end());
 }
 
 bool elfutil::isElfFile(const std::string& filePath) {
-    std::ifstream in(filePath, std::ios::binary);
+    try {
+        std::ifstream in(filePath, std::ios::binary);
+        static std::vector<char> magicNumber = {0x7f, 'E', 'L', 'F'};
+        auto itr = std::istreambuf_iterator<char>(in);
 
-    static std::vector<char> magicNumber = {0x7f, 'E', 'L', 'F'};
-    auto itr = std::istreambuf_iterator<char>(in);
-    for (int i = 0; i < 4; i++, itr++)
-        if (*itr != magicNumber[i])
-            return false;
+        for (int i = 0; i < 4; i++, itr++)
+            if (*itr != magicNumber[i])
+                return false;
+
+    } catch (const std::runtime_error& err) {
+        return false;
+    }
 
     return true;
 }

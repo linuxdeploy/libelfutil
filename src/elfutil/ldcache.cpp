@@ -133,7 +133,6 @@ namespace ldcache {
 
     vector<Entry> parse(const string& path) {
         // Read the complete file into a buffer
-        std::ifstream stream(path);
         std::ifstream in(path);
         std::vector<char> buffer((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 

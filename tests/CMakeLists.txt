@@ -23,6 +23,7 @@ if(NOT TARGET gtest)
 endif()
 
 add_subdirectory(simple_library)
+add_subdirectory(simple_library2)
 
 add_executable(ElfFileUnitTests ElfUtilUnitTests.cpp)
 add_dependencies(ElfFileUnitTests simple_library LIEF)
@@ -31,7 +32,8 @@ target_link_libraries(ElfFileUnitTests PRIVATE elfutil gtest gtest_main)
 target_include_directories(ElfFileUnitTests PRIVATE ${PROJECT_SOURCE_DIR}/include PRIVATE ${LIEF_INCLUDE_DIRS})
 target_compile_definitions(ElfFileUnitTests PUBLIC
     SIMPLE_LIBRARY_PATH="$<TARGET_FILE:simple_library>"
-    SIMPLE_LIBRARY_RPATHED_PATH="$<TARGET_FILE:simple_library_rpathed>")
+    SIMPLE_LIBRARY_RPATHED_PATH="$<TARGET_FILE:simple_library_rpathed>"
+    SIMPLE_LIBRARY2_PATH="$<TARGET_FILE:simple_library2>")
 set_target_properties(ElfFileUnitTests PROPERTIES BUILD_RPATH "/usr/lib")
 
 add_gtest(ElfFileUnitTests)

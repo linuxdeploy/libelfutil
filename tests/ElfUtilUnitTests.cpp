@@ -53,30 +53,6 @@ TEST_F(ELFUtilTestsFixture, replaceRunPath) {
     ASSERT_EQ(expected, runPath);
 }
 
-TEST_F(ELFUtilTestsFixture, getLinkedLibrariesSonames) {
-    std::set<std::string> expectedDependencies = {"libstdc++.so", "libc.so"};
-    auto list = elfutil::getLinkedLibrariesSonames(library_path.string());
-
-    std::cout << std::endl << "simple_library was linked to:" << std::endl;
-    for (const auto& p : list) {
-        boost::filesystem::path path = p;
-        auto it = expectedDependencies.find(path.stem().string());
-        if (it != expectedDependencies.end())
-            expectedDependencies.erase(it);
-
-        std::cout << p << std::endl;
-    }
-
-    ASSERT_TRUE(expectedDependencies.empty());
-}
-
-TEST_F(ELFUtilTestsFixture, getLibraryPath) {
-    auto libcPath = elfutil::getLibraryPath("libc.so.6");
-    std::cout << std::endl << "libc.so.6: " << libcPath << std::endl;
-
-    ASSERT_FALSE(libcPath.empty());
-}
-
 TEST_F(ELFUtilTestsFixture, isElfFile) {
     ASSERT_TRUE(elfutil::isElfFile(library_path.string()));
     ASSERT_TRUE(elfutil::isElfFile(library_rpathed_path.string()));
@@ -89,18 +65,27 @@ TEST_F(ELFUtilTestsFixture, getSoname) {
 
 
 TEST_F(ELFUtilTestsFixture, getLinkedLibraryPathsRecursive) {
-    std::set<std::string> expectedDependencies = {"libstdc++.so", "libc.so"};
-    auto list = elfutil::getLinkedLibrariesPathsRecursive(library_path.string());
+    std::set<std::string> expectedDependencies = {"libstdc++", "libc", "libm", "libgcc_s", "libsimple_library"};
+    auto list = elfutil::resolveDependenciesRecursively(SIMPLE_LIBRARY2_PATH);
 
-    std::cout << std::endl << "simple_library was linked to:" << std::endl;
+    std::cout << std::endl << SIMPLE_LIBRARY2_PATH << " was linked to:" << std::endl;
     for (const auto& p : list) {
-        boost::filesystem::path path = p;
-        auto it = expectedDependencies.find(path.stem().string());
+        const boost::filesystem::path path = p;
+        auto fileName = path.filename().stem();
+        while (!fileName.extension().empty())
+            fileName = fileName.stem();
+        auto it = expectedDependencies.find(fileName.string());
         if (it != expectedDependencies.end())
             expectedDependencies.erase(it);
 
-        std::cout << p << std::endl;
+        std::cout << " - " << p << std::endl;
     }
+    std::cout << std::endl;
 
     ASSERT_TRUE(expectedDependencies.empty());
+}
+
+TEST_F(ELFUtilTestsFixture, getLinkedLibraryPathsRecursiveWrongFile) {
+    auto list = elfutil::resolveDependenciesRecursively("/dev/zero");
+    ASSERT_TRUE(list.empty());
 }
