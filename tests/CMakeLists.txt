@@ -26,7 +26,7 @@ add_subdirectory(simple_library)
 add_subdirectory(simple_library2)
 
 add_executable(ElfFileUnitTests ElfUtilUnitTests.cpp)
-add_dependencies(ElfFileUnitTests simple_library LIEF)
+add_dependencies(ElfFileUnitTests simple_library simple_library2 LIEF)
 
 target_link_libraries(ElfFileUnitTests PRIVATE elfutil gtest gtest_main)
 target_include_directories(ElfFileUnitTests PRIVATE ${PROJECT_SOURCE_DIR}/include PRIVATE ${LIEF_INCLUDE_DIRS})
