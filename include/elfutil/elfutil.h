@@ -4,45 +4,36 @@
 #include <string>
 
 #include <elfutil/errors.h>
+#include <elfutil/elffile.h>
+#include <elfutil/elffiledependenciesresolver.h>
+#include <boost/shared_ptr.hpp>
 
 namespace elfutil {
-    /**
-     * Check if <filePath> has the ELF magic bytes
-     *
-     * @param filePath
-     * @return true if the bytes are present, false otherwise
-     */
-    bool isElfFile(const std::string& filePath);
+    typedef enum {
+        PATCHELF_READELF_APPS,
+        LIEF
+    } ElfFileImplementations;
+
+    typedef enum {
+        LDD_APP,
+        LIEF_AND_LD_CACHE
+    } ElfFileDependenciesResolverImplementations;
 
     /**
-     * Read the elf file RUNPATH. Fallbacks to RPATH if the RUNPATH entry is not found.
-     * @param filePath
-     * @return RUNPATH string
-     * @throw ElfFileParseError in case of error
+     * Create an instance of elffile using the requested <implementation>
+     * @param elfFilePath
+     * @param implementation
+     * @return elffile instance
      */
-    std::string getRunPath(const std::string& filePath);
+    std::shared_ptr<elffile> openElfFile(std::string elfFilePath,
+                                         ElfFileImplementations implementation = PATCHELF_READELF_APPS);
 
     /**
-     * Replace or insert the RUNPATH entry in the <file_path>
-     * @param filePath
-     * @param runPath
-     * @return true on success, false otherwise
-     * @throw ElfFileParseError in case of error
+     * Create an instance of the ElfFileDependenciesResolver using the requested <implementation>
+     * @param elfFilePath
+     * @param implementation
+     * @return instance of the ElfFileDependenciesResolver
      */
-    void setRunPath(const std::string& filePath, const std::string& runPath);
-    
-    /**
-     * Read library soname
-     * @param filePath
-     * @return soname if all goes ok, otherwise an empty string
-     */
-    std::string getSoname(const std::string& filePath);
-
-
-    /**
-     * Resolve the whole dependency tree of <file_path>
-     * @param filePath
-     * @return libraries paths
-     */
-    std::vector<std::string> resolveDependenciesRecursively(const std::string& filePath);
+    std::shared_ptr<elffiledependenciesresolver> createElfFileDependenciesResolver(std::string elfFilePath,
+                                                                                   ElfFileDependenciesResolverImplementations implementation = LDD_APP);
 }
